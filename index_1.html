@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>어디로 던질까 — 랜덤 국내여행</title>
+  <meta property="og:title" content="어디로 던질까">
+  <meta property="og:description" content="지도에 다트를 던져 다음 여행지를 결정하세요">
+  <meta property="og:image" content="https://images.unsplash.com/photo-1534274867514-d5b47ef89ed7?w=600">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700&family=Black+Han+Sans&display=swap');
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #0a0f1a; --surface: #111827; --border: #1e2a3a; --border2: #2a3e58;
+      --text: #f0ead6; --muted: #8a8070; --muted2: #3a4a62;
+      --accent: #e8533a; --accent-dark: #c73f28; --blue: #8a9ab5;
+    }
+    html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: 'Noto Serif KR', serif; }
+    header { text-align: center; padding: 3rem 1.5rem 1.5rem; }
+    header h1 { font-family: 'Black Han Sans', sans-serif; font-size: clamp(2.2rem,6vw,3.2rem); letter-spacing: -1px; line-height: 1; }
+    header h1 span { color: var(--accent); }
+    header p { margin-top: .6rem; font-size: .9rem; color: var(--muted); letter-spacing: .06em; }
+    main { max-width: 960px; margin: 0 auto; padding: 0 1.25rem 4rem; display: grid; gap: 1.25rem; }
+    #map-wrap { position: relative; border-radius: 16px; overflow: hidden; border: 1px solid var(--border); height: clamp(340px,55vw,520px); background: var(--surface); }
+    #map { width: 100%; height: 100%; }
+    .dart-overlay { position: relative; width: 60px; height: 60px; transform: translate(-50%,-50%); }
+    .dart-overlay .dot { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 12px; height: 12px; background: #e8533a; border-radius: 50%; z-index: 2; }
+    .dart-overlay .ring { position: absolute; border-radius: 50%; border: 2px solid #e8533a; top: 50%; left: 50%; transform: translate(-50%,-50%); animation: ripple 1.2s ease-out infinite; }
+    .dart-overlay .ring:nth-child(2) { width: 24px; height: 24px; }
+    .dart-overlay .ring:nth-child(3) { width: 40px; height: 40px; animation-delay: .25s; opacity: .7; }
+    .dart-overlay .ring:nth-child(4) { width: 58px; height: 58px; animation-delay: .5s; opacity: .4; }
+    @keyframes ripple { 0% { opacity:1; transform:translate(-50%,-50%) scale(.7); } 100% { opacity:0; transform:translate(-50%,-50%) scale(1.3); } }
+    #throw-btn { width: 100%; padding: 1.1rem; background: var(--accent); color: #fff; border: none; border-radius: 12px; font-family: 'Black Han Sans', sans-serif; font-size: 1.45rem; letter-spacing: .05em; cursor: pointer; transition: background .15s, transform .1s, opacity .15s; }
+    #throw-btn:hover { background: var(--accent-dark); }
+    #throw-btn:active { transform: scale(.98); }
+    #throw-btn:disabled { opacity: .5; cursor: wait; }
+    #result-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem 1.75rem; display: none; }
+    #result-card.visible { display: block; animation: slideUp .4s cubic-bezier(.22,1,.36,1); }
+    @keyframes slideUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+    .result-region { font-size: .72rem; letter-spacing: .18em; color: var(--accent); margin-bottom: .35rem; }
+    .result-name { font-family: 'Black Han Sans', sans-serif; font-size: clamp(1.8rem,5vw,2.4rem); line-height: 1.05; margin-bottom: .5rem; }
+    .result-address { font-size: .85rem; color: var(--muted); margin-bottom: .6rem; line-height: 1.6; }
+    .result-coords { display: inline-block; font-size: .75rem; color: var(--muted2); font-variant-numeric: tabular-nums; margin-bottom: 1.25rem; letter-spacing: .03em; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn { padding: .55rem 1.15rem; border-radius: 9px; font-size: .85rem; font-family: 'Noto Serif KR', serif; cursor: pointer; transition: all .15s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; border: none; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-dark); }
+    .btn-kakao { background: #FEE500; color: #191919; }
+    .btn-kakao:hover { background: #e6ce00; }
+    .btn-outline { background: transparent; color: var(--blue); border: 1px solid var(--border2); }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+    #status { text-align: center; font-size: .78rem; color: var(--muted2); letter-spacing: .04em; min-height: 1.2em; }
+    footer { text-align: center; padding: 2rem 1rem; font-size: .75rem; color: var(--muted2); }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>어디로 <span>던질까</span></h1>
+  <p>지도에 다트를 던져 다음 여행지를 결정하세요</p>
+</header>
+
+<main>
+  <div id="map-wrap"><div id="map"></div></div>
+
+  <button id="throw-btn" onclick="throwDart()">🎯 다트 던지기</button>
+
+  <div id="result-card">
+    <div class="result-region"  id="res-region"></div>
+    <div class="result-name"    id="res-name"></div>
+    <div class="result-address" id="res-address"></div>
+    <div class="result-coords"  id="res-coords"></div>
+    <div class="actions">
+      <a class="btn btn-primary" id="btn-map" href="#" target="_blank">🗺 지도에서 보기</a>
+      <button class="btn btn-kakao" onclick="shareKakao()">
+        <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+          <path d="M9 1.5C4.86 1.5 1.5 4.18 1.5 7.5c0 2.1 1.26 3.95 3.18 5.04L3.9 15.3a.3.3 0 0 0 .42.36l3.6-2.4c.35.04.71.06 1.08.06 4.14 0 7.5-2.68 7.5-6s-3.36-6-7.5-6z" fill="#191919"/>
+        </svg>
+        카카오톡 공유
+      </button>
+      <button class="btn btn-outline" onclick="copyLink()">🔗 링크 복사</button>
+      <button class="btn btn-outline" onclick="throwDart()">↺ 다시 던지기</button>
+    </div>
+  </div>
+
+  <div id="status"></div>
+</main>
+
+<footer>Powered by Kakao Maps API &nbsp;·&nbsp; 육지 좌표만 선별합니다</footer>
+
+<!-- 1) 카카오 Share SDK -->
+<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js"
+  integrity="sha384-TiCUE00h649CAMonG018J2ujOgDKW/kVWlChEuu4jK2vxfAAD0eZxzCKakxg55G4"
+  crossorigin="anonymous"></script>
+
+<!-- 2) 카카오맵 SDK — autoload=false 로 수동 초기화 -->
+<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=5ad936c9d119ddeb020435d1bd39adb2&libraries=services&autoload=false"></script>
+
+<!-- 3) 앱 로직 — 전역 함수 먼저 선언, kakao.maps.load 안에서 지도 초기화 -->
+<script>
+  const KAKAO_KEY = '5ad936c9d119ddeb020435d1bd39adb2';
+
+  /* ── 전역 상태 ── */
+  let kakaoMap       = null;
+  let geocoder       = null;
+  let currentOverlay = null;
+  let currentResult  = null;
+  let throwCount     = 0;
+  let mapReady       = false;
+
+  const BOUNDS = [
+    [37.4, 38.6, 126.6, 129.4],
+    [36.0, 37.4, 126.4, 129.4],
+    [34.5, 36.0, 126.0, 129.5],
+    [33.1, 34.0, 126.1, 126.9],
+  ];
+
+  /* ── 전역 함수 (onclick에서 호출되므로 반드시 전역) ── */
+  function throwDart() {
+    if (!mapReady) { setStatus('지도 로딩 중...'); return; }
+    _throwDart();
+  }
+
+  function shareKakao() {
+    if (!currentResult) return;
+    const { name, sido, sigu, lat, lng } = currentResult;
+    const label = `${sido} ${sigu} ${name}`.trim();
+    Kakao.Share.sendDefault({
+      objectType: 'location',
+      address: label,
+      addressTitle: label,
+      content: {
+        title: `🎯 다트가 꽂힌 곳: ${label}`,
+        description: `랜덤 좌표 ${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E — 무작정 떠나볼까?`,
+        imageUrl: 'https://images.unsplash.com/photo-1534274867514-d5b47ef89ed7?w=600',
+        link: { mobileWebUrl: location.href, webUrl: location.href },
+      },
+      buttons: [{
+        title: '지도에서 보기',
+        link: {
+          mobileWebUrl: `https://map.kakao.com/link/map/${encodeURIComponent(label)},${lat},${lng}`,
+          webUrl: `https://map.kakao.com/link/map/${encodeURIComponent(label)},${lat},${lng}`,
+        },
+      }],
+    });
+  }
+
+  function copyLink() {
+    if (!currentResult) return;
+    const { lat, lng } = currentResult;
+    const url = `${location.origin}${location.pathname}?lat=${lat.toFixed(5)}&lng=${lng.toFixed(5)}`;
+    navigator.clipboard.writeText(url).then(() => {
+      const prev = document.getElementById('status').textContent;
+      setStatus('✓ 링크 복사됨!');
+      setTimeout(() => setStatus(prev), 2000);
+    });
+  }
+
+  function setStatus(msg) {
+    document.getElementById('status').textContent = msg;
+  }
+
+  /* ── 카카오맵 로드 후 초기화 ── */
+  kakao.maps.load(function () {
+    Kakao.init(KAKAO_KEY);
+
+    kakaoMap = new kakao.maps.Map(document.getElementById('map'), {
+      center: new kakao.maps.LatLng(36.5, 127.8),
+      level: 8,
+    });
+    geocoder = new kakao.maps.services.Geocoder();
+    mapReady = true;
+
+    // URL 파라미터로 공유된 좌표 복원
+    const p = new URLSearchParams(location.search);
+    const pLat = parseFloat(p.get('lat'));
+    const pLng = parseFloat(p.get('lng'));
+    if (!isNaN(pLat) && !isNaN(pLng)) {
+      _applyCoord(pLat, pLng, 0, true);
+    }
+  });
+
+  /* ── 내부 헬퍼 ── */
+  function randomCoord() {
+    const b = BOUNDS[Math.floor(Math.random() * BOUNDS.length)];
+    return { lat: b[0] + Math.random() * (b[1] - b[0]), lng: b[2] + Math.random() * (b[3] - b[2]) };
+  }
+
+  function checkLand(lat, lng) {
+    return new Promise(resolve => {
+      geocoder.coord2RegionCode(lng, lat, (result, status) => {
+        resolve(status === kakao.maps.services.Status.OK
+          ? (result.find(r => r.region_type === 'H') || null)
+          : null);
+      });
+    });
+  }
+
+  function getAddress(lat, lng) {
+    return new Promise(resolve => {
+      geocoder.coord2Address(lng, lat, (result, status) => {
+        if (status === kakao.maps.services.Status.OK && result[0]) {
+          const r = result[0];
+          resolve(r.road_address ? r.road_address.address_name : r.address.address_name);
+        } else resolve(null);
+      });
+    });
+  }
+
+  function placeOverlay(lat, lng) {
+    if (currentOverlay) currentOverlay.setMap(null);
+    const el = document.createElement('div');
+    el.className = 'dart-overlay';
+    el.innerHTML = '<div class="ring"></div><div class="ring"></div><div class="ring"></div><div class="dot"></div>';
+    currentOverlay = new kakao.maps.CustomOverlay({
+      position: new kakao.maps.LatLng(lat, lng),
+      content: el,
+      zIndex: 10,
+    });
+    currentOverlay.setMap(kakaoMap);
+  }
+
+  function showResultCard(region, address, lat, lng, tries) {
+    const sido = region.region_1depth_name || '';
+    const sigu = region.region_2depth_name || '';
+    const dong = region.region_3depth_name || '';
+    const name = dong || sigu || sido;
+    currentResult = { lat, lng, sido, sigu, dong, name, address };
+
+    document.getElementById('res-region').textContent  = `${sido} ${sigu}`.trim();
+    document.getElementById('res-name').textContent    = name;
+    document.getElementById('res-address').textContent = address || `${sido} ${sigu} ${dong}`.trim();
+    document.getElementById('res-coords').textContent  =
+      tries > 0
+        ? `${lat.toFixed(5)}°N  ${lng.toFixed(5)}°E  (${tries}번 만에 착지)`
+        : `${lat.toFixed(5)}°N  ${lng.toFixed(5)}°E`;
+    document.getElementById('btn-map').href =
+      `https://map.kakao.com/link/map/${encodeURIComponent(name)},${lat},${lng}`;
+
+    const card = document.getElementById('result-card');
+    card.classList.remove('visible');
+    void card.offsetWidth;
+    card.classList.add('visible');
+  }
+
+  async function _throwDart() {
+    const btn = document.getElementById('throw-btn');
+    btn.disabled = true;
+    btn.textContent = '날아가는 중...';
+    setStatus('육지 찾는 중...');
+
+    let region = null, lat, lng, tries = 0;
+    while (!region && tries < 25) {
+      tries++;
+      const c = randomCoord();
+      lat = c.lat; lng = c.lng;
+      region = await checkLand(lat, lng);
+    }
+
+    if (!region) {
+      setStatus('육지를 못 찾았어요. 다시 시도해주세요.');
+      btn.disabled = false;
+      btn.textContent = '🎯 다트 던지기';
+      return;
+    }
+
+    const address = await getAddress(lat, lng);
+    kakaoMap.panTo(new kakao.maps.LatLng(lat, lng));
+    kakaoMap.setLevel(6);
+    placeOverlay(lat, lng);
+    showResultCard(region, address, lat, lng, tries);
+
+    throwCount++;
+    setStatus(`총 ${throwCount}번 던졌습니다`);
+    btn.disabled = false;
+    btn.textContent = '🎯 다시 던지기';
+  }
+
+  async function _applyCoord(lat, lng, tries, isShared) {
+    const region  = await checkLand(lat, lng);
+    const address = await getAddress(lat, lng);
+    if (!region) return;
+
+    kakaoMap.setCenter(new kakao.maps.LatLng(lat, lng));
+    kakaoMap.setLevel(6);
+    placeOverlay(lat, lng);
+    showResultCard(region, address, lat, lng, tries);
+    if (isShared) {
+      setStatus('공유받은 좌표입니다');
+      document.getElementById('throw-btn').textContent = '🎯 다트 던지기';
+    }
+  }
+</script>
+</body>
+</html>
