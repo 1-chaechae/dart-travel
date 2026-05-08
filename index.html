@@ -127,17 +127,104 @@
 
   /* ── 전역 상태 ── */
   let kakaoMap       = null;
-  let geocoder       = null;
   let currentOverlay = null;
   let currentResult  = null;
   let throwCount     = 0;
   let mapReady       = false;
 
-  const BOUNDS = [
-    [37.4, 38.6, 126.6, 129.4],
-    [36.0, 37.4, 126.4, 129.4],
-    [34.5, 36.0, 126.0, 129.5],
-    [33.1, 34.0, 126.1, 126.9],
+  const DESTINATIONS = [
+
+    { name:'강화도',          region:'인천',  lat:37.7463, lng:126.4875 },
+    { name:'월미도',          region:'인천',  lat:37.4734, lng:126.5985 },
+    { name:'송도',            region:'인천',  lat:37.3825, lng:126.6561 },
+    { name:'수원화성',        region:'경기',  lat:37.2857, lng:127.0135 },
+    { name:'가평',            region:'경기',  lat:37.8314, lng:127.5097 },
+    { name:'남한산성',        region:'경기',  lat:37.4793, lng:127.1786 },
+    { name:'광명동굴',        region:'경기',  lat:37.4779, lng:126.8649 },
+    { name:'강릉 경포대',     region:'강원',  lat:37.7963, lng:128.9015 },
+    { name:'속초',            region:'강원',  lat:38.2070, lng:128.5918 },
+    { name:'설악산',          region:'강원',  lat:38.1194, lng:128.4656 },
+    { name:'춘천 남이섬',     region:'강원',  lat:37.7902, lng:127.5247 },
+    { name:'평창 대관령',     region:'강원',  lat:37.6782, lng:128.7181 },
+    { name:'정동진',          region:'강원',  lat:37.6863, lng:129.0573 },
+    { name:'삼척 해신당공원', region:'강원',  lat:37.4408, lng:129.1706 },
+    { name:'태백산',          region:'강원',  lat:37.0985, lng:128.9130 },
+    { name:'양양 낙산사',     region:'강원',  lat:38.1011, lng:128.6365 },
+    { name:'인제 자작나무숲', region:'강원',  lat:38.0631, lng:128.1720 },
+    { name:'공주 무령왕릉',   region:'충남',  lat:36.4561, lng:127.1188 },
+    { name:'부여 백제문화단지', region:'충남', lat:36.2726, lng:126.9101 },
+    { name:'대천해수욕장',    region:'충남',  lat:36.3191, lng:126.4933 },
+    { name:'태안 꽃지해변',   region:'충남',  lat:36.6046, lng:126.3080 },
+    { name:'아산 온양온천',   region:'충남',  lat:36.7897, lng:127.0038 },
+    { name:'단양 도담삼봉',   region:'충북',  lat:37.0026, lng:128.3656 },
+    { name:'충주호',          region:'충북',  lat:37.0059, lng:128.0100 },
+    { name:'청주 청남대',     region:'충북',  lat:36.5399, lng:127.5460 },
+    { name:'수안보온천',      region:'충북',  lat:36.8569, lng:127.9855 },
+    { name:'제천 청풍호',     region:'충북',  lat:37.0534, lng:128.1863 },
+    { name:'경주 불국사',     region:'경북',  lat:35.7897, lng:129.3315 },
+    { name:'경주 첨성대',     region:'경북',  lat:35.8348, lng:129.2191 },
+    { name:'안동 하회마을',   region:'경북',  lat:36.5389, lng:128.5188 },
+    { name:'포항 호미곶',     region:'경북',  lat:36.0761, lng:129.5684 },
+    { name:'울릉도',          region:'경북',  lat:37.4956, lng:130.8656 },
+    { name:'영주 부석사',     region:'경북',  lat:36.9541, lng:128.6581 },
+    { name:'청송 주왕산',     region:'경북',  lat:36.3949, lng:129.1513 },
+    { name:'봉화 청량산',     region:'경북',  lat:36.7905, lng:128.9209 },
+    { name:'대구 앞산',       region:'대구',  lat:35.8204, lng:128.5700 },
+    { name:'대구 김광석길',   region:'대구',  lat:35.8693, lng:128.6038 },
+    { name:'부산 해운대',     region:'부산',  lat:35.1587, lng:129.1603 },
+    { name:'부산 감천문화마을', region:'부산', lat:35.0975, lng:129.0100 },
+    { name:'부산 광안리',     region:'부산',  lat:35.1531, lng:129.1185 },
+    { name:'부산 태종대',     region:'부산',  lat:35.0517, lng:129.0857 },
+    { name:'통영',            region:'경남',  lat:34.8544, lng:128.4330 },
+    { name:'거제 외도',       region:'경남',  lat:34.7696, lng:128.7145 },
+    { name:'남해 독일마을',   region:'경남',  lat:34.8101, lng:127.9230 },
+    { name:'합천 해인사',     region:'경남',  lat:35.7998, lng:128.1049 },
+    { name:'밀양 얼음골',     region:'경남',  lat:35.5157, lng:129.0121 },
+    { name:'창원 진해',       region:'경남',  lat:35.1530, lng:128.6730 },
+    { name:'울산 간절곶',     region:'울산',  lat:35.3617, lng:129.3747 },
+    { name:'울산 대왕암공원', region:'울산',  lat:35.5011, lng:129.4178 },
+    { name:'전주 한옥마을',   region:'전북',  lat:35.8150, lng:127.1531 },
+    { name:'군산 근대역사지구', region:'전북', lat:35.9683, lng:126.7164 },
+    { name:'남원 광한루',     region:'전북',  lat:35.4073, lng:127.3906 },
+    { name:'무주 덕유산',     region:'전북',  lat:35.8746, lng:127.7346 },
+    { name:'진안 마이산',     region:'전북',  lat:35.7203, lng:127.4249 },
+    { name:'부안 채석강',     region:'전북',  lat:35.6710, lng:126.4871 },
+    { name:'고창 선운사',     region:'전북',  lat:35.6179, lng:126.5875 },
+    { name:'여수 돌산도',     region:'전남',  lat:34.7346, lng:127.7244 },
+    { name:'여수 향일암',     region:'전남',  lat:34.6534, lng:127.7762 },
+    { name:'순천만습지',      region:'전남',  lat:34.8984, lng:127.5186 },
+    { name:'담양 메타세쿼이아길', region:'전남', lat:35.3219, lng:126.9882 },
+    { name:'보성 녹차밭',     region:'전남',  lat:34.7715, lng:127.0815 },
+    { name:'목포 유달산',     region:'전남',  lat:34.8054, lng:126.3920 },
+    { name:'진도 운림산방',   region:'전남',  lat:34.4800, lng:126.2630 },
+    { name:'해남 땅끝마을',   region:'전남',  lat:34.2928, lng:126.5293 },
+    { name:'완도',            region:'전남',  lat:34.3104, lng:126.7553 },
+    { name:'신안 퍼플섬',     region:'전남',  lat:34.8279, lng:126.0697 },
+    { name:'광주 무등산',     region:'광주',  lat:35.1350, lng:127.0059 },
+    { name:'광주 양림동',     region:'광주',  lat:35.1388, lng:126.9037 },
+    { name:'한라산',          region:'제주',  lat:33.3617, lng:126.5292 },
+    { name:'성산일출봉',      region:'제주',  lat:33.4586, lng:126.9425 },
+    { name:'협재해수욕장',    region:'제주',  lat:33.3942, lng:126.2397 },
+    { name:'천지연폭포',      region:'제주',  lat:33.2465, lng:126.5617 },
+    { name:'우도',            region:'제주',  lat:33.5020, lng:126.9520 },
+    { name:'산방산',          region:'제주',  lat:33.2388, lng:126.3133 },
+    { name:'비자림',          region:'제주',  lat:33.4826, lng:126.8094 },
+    { name:'오설록 티뮤지엄', region:'제주',  lat:33.3058, lng:126.2896 },
+    { name:'용머리해안',      region:'제주',  lat:33.2358, lng:126.3106 },
+    { name:'만장굴',          region:'제주',  lat:33.5284, lng:126.7711 },
+    { name:'함덕해수욕장',    region:'제주',  lat:33.5435, lng:126.6697 },
+    { name:'월정리해변',      region:'제주',  lat:33.5602, lng:126.7954 },
+    { name:'거문도',          region:'전남',  lat:34.0280, lng:127.3084 },
+    { name:'흑산도',          region:'전남',  lat:34.6836, lng:125.4340 },
+    { name:'홍도',            region:'전남',  lat:34.6920, lng:125.1887 },
+    { name:'소매물도',        region:'경남',  lat:34.5889, lng:128.3615 },
+    { name:'외연도',          region:'충남',  lat:36.2333, lng:125.9833 },
+    { name:'덕적도',          region:'인천',  lat:37.2278, lng:126.1547 },
+    { name:'자월도',          region:'인천',  lat:37.2667, lng:126.3167 },
+    { name:'대청도',          region:'인천',  lat:37.8287, lng:124.7177 },
+    { name:'백령도',          region:'인천',  lat:37.9661, lng:124.6930 },
+    { name:'무의도',          region:'인천',  lat:37.3991, lng:126.3918 },
+    { name:'장봉도',          region:'인천',  lat:37.5508, lng:126.3570 },
   ];
 
   /* ── 전역 함수 (onclick에서 호출되므로 반드시 전역) ── */
@@ -193,7 +280,6 @@
       center: new kakao.maps.LatLng(36.2, 127.8),
       level: 13,
     });
-    geocoder = new kakao.maps.services.Geocoder();
     mapReady = true;
 
     // URL 파라미터로 공유된 좌표 복원
@@ -209,27 +295,6 @@
   function randomCoord() {
     const b = BOUNDS[Math.floor(Math.random() * BOUNDS.length)];
     return { lat: b[0] + Math.random() * (b[1] - b[0]), lng: b[2] + Math.random() * (b[3] - b[2]) };
-  }
-
-  function checkLand(lat, lng) {
-    return new Promise(resolve => {
-      geocoder.coord2RegionCode(lng, lat, (result, status) => {
-        resolve(status === kakao.maps.services.Status.OK
-          ? (result.find(r => r.region_type === 'H') || null)
-          : null);
-      });
-    });
-  }
-
-  function getAddress(lat, lng) {
-    return new Promise(resolve => {
-      geocoder.coord2Address(lng, lat, (result, status) => {
-        if (status === kakao.maps.services.Status.OK && result[0]) {
-          const r = result[0];
-          resolve(r.road_address ? r.road_address.address_name : r.address.address_name);
-        } else resolve(null);
-      });
-    });
   }
 
   function placeOverlay(lat, lng) {
@@ -284,20 +349,28 @@
     }, 580);
   }
 
-  function showResultCard(region, address, lat, lng, tries) {
-    const sido = region.region_1depth_name || '';
-    const sigu = region.region_2depth_name || '';
-    const dong = region.region_3depth_name || '';
-    const name = dong || sigu || sido;
-    currentResult = { lat, lng, sido, sigu, dong, name, address };
+  async function _throwDart() {
+    const btn = document.getElementById('throw-btn');
+    btn.disabled = true;
+    btn.textContent = '날아가는 중...';
+    setStatus('');
 
-    document.getElementById('res-region').textContent  = `${sido} ${sigu}`.trim();
+    const dest = DESTINATIONS[Math.floor(Math.random() * DESTINATIONS.length)];
+    const { name, region, lat, lng } = dest;
+
+    currentResult = { lat, lng, sido: region, sigu: '', dong: name, name, address: `${region} ${name}` };
+
+    kakaoMap.setLevel(13, { animate: { duration: 400 } });
+    kakaoMap.panTo(new kakao.maps.LatLng(lat, lng));
+    setTimeout(() => {
+      kakaoMap.setLevel(7, { animate: { duration: 400 } });
+      setTimeout(() => placeOverlay(lat, lng), 450);
+    }, 500);
+
+    document.getElementById('res-region').textContent  = region;
     document.getElementById('res-name').textContent    = name;
-    document.getElementById('res-address').textContent = address || `${sido} ${sigu} ${dong}`.trim();
-    document.getElementById('res-coords').textContent  =
-      tries > 0
-        ? `${lat.toFixed(5)}°N  ${lng.toFixed(5)}°E  (${tries}번 만에 착지)`
-        : `${lat.toFixed(5)}°N  ${lng.toFixed(5)}°E`;
+    document.getElementById('res-address').textContent = `${region} ${name}`;
+    document.getElementById('res-coords').textContent  = `${lat.toFixed(4)}°N  ${lng.toFixed(4)}°E`;
     document.getElementById('btn-map').href =
       `https://map.kakao.com/link/map/${encodeURIComponent(name)},${lat},${lng}`;
 
@@ -305,40 +378,6 @@
     card.classList.remove('visible');
     void card.offsetWidth;
     card.classList.add('visible');
-  }
-
-  async function _throwDart() {
-    const btn = document.getElementById('throw-btn');
-    btn.disabled = true;
-    btn.textContent = '날아가는 중...';
-    setStatus('육지 찾는 중...');
-
-    let region = null, lat, lng, tries = 0;
-    while (!region && tries < 25) {
-      tries++;
-      const c = randomCoord();
-      lat = c.lat; lng = c.lng;
-      region = await checkLand(lat, lng);
-    }
-
-    if (!region) {
-      setStatus('육지를 못 찾았어요. 다시 시도해주세요.');
-      btn.disabled = false;
-      btn.textContent = '🎯 다트 던지기';
-      return;
-    }
-
-    const address = await getAddress(lat, lng);
-
-    // 전국 뷰에서 목표 지점으로 줌인 후 다트 꽂기
-    kakaoMap.setLevel(13, { animate: { duration: 400 } });
-    kakaoMap.panTo(new kakao.maps.LatLng(lat, lng));
-    setTimeout(() => {
-      kakaoMap.setLevel(6, { animate: { duration: 400 } });
-      setTimeout(() => placeOverlay(lat, lng), 450);
-    }, 500);
-
-    showResultCard(region, address, lat, lng, tries);
 
     throwCount++;
     setStatus(`총 ${throwCount}번 던졌습니다`);
@@ -347,14 +386,28 @@
   }
 
   async function _applyCoord(lat, lng, tries, isShared) {
-    const region  = await checkLand(lat, lng);
-    const address = await getAddress(lat, lng);
-    if (!region) return;
+    // 좌표로 가장 가까운 DESTINATIONS 찾기
+    let closest = DESTINATIONS[0];
+    let minDist = Infinity;
+    for (const d of DESTINATIONS) {
+      const dist = Math.hypot(d.lat - lat, d.lng - lng);
+      if (dist < minDist) { minDist = dist; closest = d; }
+    }
+    const { name, region } = closest;
+    currentResult = { lat, lng, sido: region, sigu: '', dong: name, name, address: `${region} ${name}` };
 
     kakaoMap.setCenter(new kakao.maps.LatLng(lat, lng));
-    kakaoMap.setLevel(6);
+    kakaoMap.setLevel(7);
     placeOverlay(lat, lng);
-    showResultCard(region, address, lat, lng, tries);
+
+    document.getElementById('res-region').textContent  = region;
+    document.getElementById('res-name').textContent    = name;
+    document.getElementById('res-address').textContent = `${region} ${name}`;
+    document.getElementById('res-coords').textContent  = `${lat.toFixed(4)}°N  ${lng.toFixed(4)}°E`;
+    document.getElementById('btn-map').href =
+      `https://map.kakao.com/link/map/${encodeURIComponent(name)},${lat},${lng}`;
+
+    document.getElementById('result-card').classList.add('visible');
     if (isShared) {
       setStatus('공유받은 좌표입니다');
       document.getElementById('throw-btn').textContent = '🎯 다트 던지기';
